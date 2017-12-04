@@ -251,12 +251,12 @@ limitations under the License.
       <artifactId>flume-ng-sdk</artifactId>
     </dependency>
 
-    <dependency>
+<!--    <dependency>
       <groupId>org.apache.flume</groupId>
       <artifactId>flume-ng-sdk</artifactId>
       <classifier>tests</classifier>
       <scope>test</scope>
-    </dependency>
+    </dependency>-->
 
     <dependency>
       <groupId>org.apache.flume</groupId>

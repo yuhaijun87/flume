@@ -43,7 +43,7 @@ public class TailFile {
   private static final int NEED_READING = -1;
 
   private RandomAccessFile raf;
-  private final String path;
+  private String  path ;//20170922 yhj  private final String path;
   private final long inode;
   private long pos;
   private long lastUpdated;
@@ -74,6 +74,9 @@ public class TailFile {
   public RandomAccessFile getRaf() {
     return raf;
   }
+
+  //20170922 解决文件滚动的时候，比如零点文件切换的时候，虽然inode相同，但是文件名称不同，这个时候position中存储的还是老的文件名称
+  public void setPath(String path ) { this.path = path; }
 
   public String getPath() {
     return path;
@@ -120,7 +123,7 @@ public class TailFile {
   }
 
   public boolean updatePos(String path, long inode, long pos) throws IOException {
-    if (this.inode == inode && this.path.equals(path)) {
+    if(this.inode == inode ) { // 20170922  if (this.inode == inode && this.path.equals(path)) {
       setPos(pos);
       updateFilePos(pos);
       logger.info("Updated position, file: " + path + ", inode: " + inode + ", pos: " + pos);

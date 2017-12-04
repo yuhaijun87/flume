@@ -18,10 +18,13 @@
 
 package org.apache.flume.interceptor;
 
-import java.util.List;
-import java.util.Map;
+import org.apache.commons.lang.StringUtils;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 import static org.apache.flume.interceptor.TimestampInterceptor.Constants.*;
 
@@ -34,12 +37,22 @@ import static org.apache.flume.interceptor.TimestampInterceptor.Constants.*;
 public class TimestampInterceptor implements Interceptor {
 
   private final boolean preserveExisting;
+  private boolean useLogTimeStamp ;
+  private String logFormat;
+  private String logDelimiter;
+  private int logTimestampIndex;
+
 
   /**
    * Only {@link TimestampInterceptor.Builder} can build me
    */
-  private TimestampInterceptor(boolean preserveExisting) {
+  private TimestampInterceptor(boolean preserveExisting,boolean useLogTimeStamp,String logFormat,String logDelimiter
+                               ,int logTimestampIndex) {
     this.preserveExisting = preserveExisting;
+    this.useLogTimeStamp=useLogTimeStamp;
+    this.logFormat=logFormat;
+    this.logDelimiter=logDelimiter;
+    this.logTimestampIndex=logTimestampIndex;
   }
 
   @Override
@@ -55,7 +68,19 @@ public class TimestampInterceptor implements Interceptor {
     Map<String, String> headers = event.getHeaders();
     if (preserveExisting && headers.containsKey(TIMESTAMP)) {
       // we must preserve the existing timestamp
-    } else {
+    } else if (useLogTimeStamp){
+      if(StringUtils.equalsIgnoreCase(logFormat,DEFAULT_LOGFORAMTTEXT) && StringUtils.isNotEmpty(logDelimiter) ) {
+        List<String> tempLogs = Arrays.asList( new String(event.getBody()).split( logDelimiter));
+        if(logTimestampIndex >=0 && logTimestampIndex< tempLogs.size()   &&
+                StringUtils.isNotEmpty( tempLogs.get( logTimestampIndex ) )&&
+                StringUtils.isNumeric( tempLogs.get( logTimestampIndex ) )&&
+                Long.valueOf(tempLogs.get( logTimestampIndex )) > 0 ){
+          event.getHeaders().put( TIMESTAMP ,tempLogs.get( logTimestampIndex ));
+        }
+      }
+    }
+
+    if(!headers.containsKey(TIMESTAMP)) {
       long now = System.currentTimeMillis();
       headers.put(TIMESTAMP, Long.toString(now));
     }
@@ -86,15 +111,25 @@ public class TimestampInterceptor implements Interceptor {
   public static class Builder implements Interceptor.Builder {
 
     private boolean preserveExisting = PRESERVE_DFLT;
+    private boolean useLogTimeStamp ;
+    private String logFormat;
+    private String logDelimiter;
+    private int logTimestampIndex;
 
     @Override
     public Interceptor build() {
-      return new TimestampInterceptor(preserveExisting);
+      return new TimestampInterceptor(preserveExisting,useLogTimeStamp,logFormat,logDelimiter,logTimestampIndex);
     }
 
     @Override
     public void configure(Context context) {
+
       preserveExisting = context.getBoolean(PRESERVE, PRESERVE_DFLT);
+      useLogTimeStamp=context.getBoolean(USELOGTIMESTAMP,false);
+      logFormat=context.getString( LOGFORMAT,DEFAULT_LOGFORAMTTEXT);
+      logDelimiter=context.getString(LOGDELIMITER,DEFAULT_LOGDELIMITER);
+      logTimestampIndex =context.getInteger(LOGTIMESTAMPINDEX,-1);
+
     }
 
   }
@@ -103,6 +138,12 @@ public class TimestampInterceptor implements Interceptor {
     public static String TIMESTAMP = "timestamp";
     public static String PRESERVE = "preserveExisting";
     public static boolean PRESERVE_DFLT = false;
+    public static String USELOGTIMESTAMP ="useLogTimeStamp";
+    public static String LOGFORMAT="logFormat";
+    public static String LOGDELIMITER="logDelimiter";
+    public static String LOGTIMESTAMPINDEX="logTimestampIndex";
+    public static String DEFAULT_LOGFORAMTTEXT="text";
+    public static String DEFAULT_LOGDELIMITER=",";
   }
 
 }

@@ -56,8 +56,8 @@ limitations under the License.
       <groupId>org.apache.flume.flume-ng-sinks</groupId>
       <artifactId>flume-ng-kafka-sink</artifactId>
       <version>${project.version}</version>
-      <classifier>tests</classifier>
-      <scope>test</scope>
+    <!--  <classifier>tests</classifier>
+      <scope>test</scope>-->
     </dependency>
 
   </dependencies>

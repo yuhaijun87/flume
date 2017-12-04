@@ -133,7 +133,7 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
               + "inode: " + inode + ", pos: " + pos + ", path: " + path);
         }
         TailFile tf = tailFiles.get(inode);
-        if (tf != null && tf.updatePos(path, inode, pos)) {
+        if (tf != null && tf.updatePos(tf.getPath(), inode, pos)) { //20170921 yhj if (tf != null && tf.updatePos(path, inode, pos)) {
           tailFiles.put(inode, tf);
         } else {
           logger.info("Missing file: " + path + ", inode: " + inode + ", pos: " + pos);
@@ -233,6 +233,17 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
   /**
    * Update tailFiles mapping if a new file is created or appends are detected
    * to the existing file.
+   *
+   * 当发生文件切换时，会产生重复数据
+   * 比如开始读取的文件名称是tomcat.log  inode为1 ，到每天零点切文件的时候，
+   *    1.  mv  tomcat.log tomcat.log.yyyyMMdd  这时候， tomcat.log.yyyyMMdd的inode不变，还是1
+   *    2.新建一个文件tomcat.log  ，inode变成了2
+   *
+   *  这个时候，会把 tomcat.log.yyyyMMdd 的文件内容重新读一遍
+   *
+   *  解决bug： 参考：http://blog.csdn.net/u010936936/article/details/74299511
+   *
+   *
    */
   public List<Long> updateTailFiles(boolean skipToEnd) throws IOException {
     updateTime = System.currentTimeMillis();
@@ -244,7 +255,7 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
       for (File f : taildir.getMatchingFiles()) {
         long inode = getInode(f);
         TailFile tf = tailFiles.get(inode);
-        if (tf == null || !tf.getPath().equals(f.getAbsolutePath())) {
+       if(tf == null ){ //20170921 yhj if (tf == null || !tf.getPath().equals(f.getAbsolutePath())) {
           long startPos = skipToEnd ? f.length() : 0;
           tf = openFile(f, headers, inode, startPos);
         } else {
@@ -259,6 +270,7 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
               tf.updatePos(tf.getPath(), inode, 0);
             }
           }
+          tf.setPath( f.getPath() );
           tf.setNeedTail(updated);
         }
         tailFiles.put(inode, tf);
